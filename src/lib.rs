@@ -70,82 +70,107 @@ pub fn fill_circle(pixels: &mut Vec<u32>, width: u32, height: u32, x_center: u32
     }
 }
 
-pub fn draw_line(pixels: &mut Vec<u32>, width: u32, height: u32, x1: u32, y1: u32, x2: u32, y2: u32, color: u32) {
-    let mut dx: u32 = 0;
-    let mut dy: u32 = 0;
-    if x1 > x2 {
-        dx = x1 - x2;
-    }
-    else {
-        dx = x2 -x1;
-    }
-    if y1 > y2 {
-        dy = y1 - y2;
-    }
-    else {
-        dy = y2 - y1;
-    }
-    
-    //let dx = x2.saturating_sub(x1);
-    //let dy = y2.saturating_sub(y1);
+pub fn draw_line(pixels: &mut Vec<u32>, width: u32, height: u32, x1: u32, y1: u32, x2: u32, y2: u32, color: u32, thickness: u32) {
+    let dx: i32 = x2 as i32 - x1 as i32;
+    let dy: i32 = y2 as i32 - y1 as i32;
 
-    let mut x_1 = x1;
-    let mut x_2 = x2;
-    let mut y_1 = y1;
-    let mut y_2 = y2;
+    for thick in 0..=thickness {
+    let mut x_1 = x1 + thick;
+    let mut x_2 = x2 + thick;
+    let mut y_1 = y1 + thick;
+    let mut y_2 = y2 + thick;
+
     if dx != 0 {
-        let c = y1 - (dy*x1)/dx;
-
+        let c = y_1 as i32 - (dy*x_1 as i32)/dx;
         if x1 > x2 {
-            let mut temp = x_2;
-            x_2 = x_1;
-            x_1 = temp;
+            let mut temp = x_1;
+            x_1 = x_2;
+            x_2 = temp;
         }
         for x in x_1..=x_2 {
-            if x < width {
-                let y = (dy*x)/dx + c;
-                if y < height {
-                    pixels[(y*width + x) as usize] = color;
+            if x > 0 && x < width {
+                let mut sy1 = dy*x as i32/dx + c;
+                let mut sy2 = dy*(x as i32 + 1)/dx + c;
+                if sy1 > sy2 {
+                    let mut temp = sy1;
+                    sy1 = sy2;
+                    sy2 = temp;
+                }
+                for y in sy1..=sy2 {
+                    if y > 0 && y < height as i32 {
+                        pixels[(y*width as i32 + x as i32) as usize] = color; 
+                    }
                 }
             }
         }
     }
+
     else {
-        let x = x1;
+        let x = x1 + thick;
         if x < width {
             if y1 > y2 {
                 let mut temp = y_1;
                 y_1 = y_2;
                 y_2 = temp;
-            }    
-            for y in y_1..=y_2 {
-                pixels[(y * width + x) as usize] = color;
+            }
+            for y in y_1..y_2 {
+                pixels[(y as i32*width as i32 + x as i32) as usize] = color;
             }
         }
     }
+    }
 }
 
-pub fn draw_rect(pixels: &mut Vec<u32>, width: u32, height: u32, x_start: u32, y_start: u32, x_off: u32, y_off: u32, color: u32) {
+pub fn draw_rect(pixels: &mut Vec<u32>, width: u32, height: u32, x_start: u32, y_start: u32, x_off: u32, y_off: u32, color: u32, thickness: u32) {
     let x_end = x_start + x_off;
     let y_end = y_start + y_off;
 
-    if x_end <= width && y_end <= height {
-        draw_line(pixels, width, height, x_start, y_start, x_end, y_start, color);
-        draw_line(pixels, width, height, x_end, y_start, x_end, y_end, color);
-        draw_line(pixels, width, height, x_end, y_end, x_start, y_end, color);
-        draw_line(pixels, width, height, x_start, y_end, x_start, y_start, color);
+    for thick in 0..=thickness {
+    if x_start-thick > 0 && y_start-thick > 0 && x_end+thick <= width && y_end+thick <= height {
+        draw_line(pixels, width, height, x_start-thick, y_start-thick, x_end+thick, y_start-thick, color, 1);
+        draw_line(pixels, width, height, x_end+thick, y_start-thick, x_end+thick, y_end+thick, color, 1);
+        draw_line(pixels, width, height, x_end+thick, y_end+thick, x_start-thick, y_end+thick, color, 1);
+        draw_line(pixels, width, height, x_start-thick, y_end+thick, x_start-thick, y_start-thick, color, 1);
     }
     else {
         panic!("Out of bounds to draw rectangle!");
     }
+    }
 }
 
-pub fn draw_square(pixels: &mut Vec<u32>, width: u32, height: u32, x_start: u32, y_start: u32, side: u32, color: u32) {
-    draw_rect(pixels, width, height, x_start, y_start, side, side, color);
+pub fn draw_square(pixels: &mut Vec<u32>, width: u32, height: u32, x_start: u32, y_start: u32, side: u32, color: u32, thickness: u32) {
+    draw_rect(pixels, width, height, x_start, y_start, side, side, color, thickness);
 }
 
-pub fn draw_circle(pixels: &mut Vec<u32>, width: u32, height: u32, x_center: u32, y_center: u32, radius: u32, color: u32) {
+pub fn draw_circle(pixels: &mut Vec<u32>, width: u32, height: u32, x_center: u32, y_center: u32, radius: u32, color: u32, thickness: u32) {
+    let x1 = x_center.saturating_sub(radius);
+    let x2 = x_center.saturating_add(radius);
+    let y1 = y_center.saturating_sub(radius);
+    let y2 = y_center.saturating_add(radius);
 
+    let x_center_i32 = x_center as i32;
+    let y_center_i32 = y_center as i32;
+    let radius_i32 = radius as i32;
+
+    for i in x1..=x2 {
+        if i >= 0 && i<= width {
+            let x_diff = i as i32 - x_center_i32;
+            let x_diff_squared = x_diff * x_diff;
+            for j in y1..=y2 {
+                if j >= 0 && j<= height {
+                    let y_diff = j as i32 - y_center_i32;
+                    let y_diff_squared = y_diff * y_diff;
+//                    let distance_squared = x_diff_squared + y_diff_squared;
+//                    let inner_circle = (radius_i32 - thick as i32) * (radius_i32 - thick as i32);
+//                    let outer_circle = (radius_i32 + thick as i32) * (radius_i32 + thick as i32);
+                    let distance = f64::sqrt((x_diff_squared + y_diff_squared) as f64);
+                    if distance >= (radius_i32-thickness as i32) as f64 && distance <= radius_i32 as f64 {
+                        pixels[(j*width + i) as usize] = color;
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn write_to_ppm(pixels: &Vec<u32>, width: u32, height: u32, file_path: &str) {
